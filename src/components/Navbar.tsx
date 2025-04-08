@@ -34,6 +34,7 @@ const Navbar = () => {
                 <Link to="/" className="hover:text-theatre-gold py-2" onClick={() => setIsMenuOpen(false)}>Home</Link>
                 <Link to="/shows" className="hover:text-theatre-gold py-2" onClick={() => setIsMenuOpen(false)}>Shows</Link>
                 <Link to="/special-offers" className="hover:text-theatre-gold py-2" onClick={() => setIsMenuOpen(false)}>Special Offers</Link>
+                <Link to="/contact" className="hover:text-theatre-gold py-2" onClick={() => setIsMenuOpen(false)}>Contact</Link>
                 <Link to="/my-account" className="hover:text-theatre-gold py-2" onClick={() => setIsMenuOpen(false)}>My Account</Link>
                 <Button variant="default" className="bg-theatre-maroon hover:bg-theatre-gold hover:text-theatre-navy">
                   Book Now
@@ -46,6 +47,7 @@ const Navbar = () => {
             <Link to="/" className="hover:text-theatre-gold transition-colors">Home</Link>
             <Link to="/shows" className="hover:text-theatre-gold transition-colors">Shows</Link>
             <Link to="/special-offers" className="hover:text-theatre-gold transition-colors">Special Offers</Link>
+            <Link to="/contact" className="hover:text-theatre-gold transition-colors">Contact</Link>
             <Link to="/my-account" className="hover:text-theatre-gold transition-colors">My Account</Link>
             <Button variant="default" className="bg-theatre-maroon hover:bg-theatre-gold hover:text-theatre-navy transition-colors">
               Book Now
