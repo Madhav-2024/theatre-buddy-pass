@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,16 +10,9 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar, Ticket, Award, User, Star, Clock, MapPin } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
+import { useSupabaseAuth, UserData } from "@/hooks/useSupabaseAuth";
 
-// Mock user data
-const userData = {
-  name: "Jane Smith",
-  email: "jane.smith@example.com",
-  joinDate: "January 15, 2025",
-  loyaltyTier: "Silver",
-  showsAttended: 8,
-  pointsEarned: 2450,
-  pointsToNextTier: 1550,
+const mockBookingData = {
   upcomingShows: [
     {
       id: 2,
@@ -58,7 +50,6 @@ const userData = {
 };
 
 const AccountPage = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -67,15 +58,31 @@ const AccountPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
   
-  const handleLogin = (e: React.FormEvent) => {
+  const { user, loading, error, register, login, logout, checkSession } = useSupabaseAuth();
+
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (email && password) {
-      setIsLoggedIn(true);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back to TheatreBuddy!",
-        variant: "default",
-      });
+      const success = await login(email, password);
+      
+      if (success) {
+        toast({
+          title: "Login Successful",
+          description: "Welcome back to TheatreBuddy!",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Login Failed",
+          description: error || "Invalid email or password.",
+          variant: "destructive",
+        });
+      }
     } else {
       toast({
         title: "Login Failed",
@@ -84,16 +91,26 @@ const AccountPage = () => {
       });
     }
   };
-  
-  const handleRegister = (e: React.FormEvent) => {
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (name && registerEmail && registerPassword) {
-      setIsLoggedIn(true);
-      toast({
-        title: "Registration Successful",
-        description: "Welcome to TheatreBuddy! Your account has been created.",
-        variant: "default",
-      });
+      const success = await register(name, registerEmail, registerPassword);
+      
+      if (success) {
+        toast({
+          title: "Registration Successful",
+          description: "Welcome to TheatreBuddy! Your account has been created.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Registration Failed",
+          description: error || "Could not create your account. Please try again.",
+          variant: "destructive",
+        });
+      }
     } else {
       toast({
         title: "Registration Failed",
@@ -102,22 +119,32 @@ const AccountPage = () => {
       });
     }
   };
-  
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setEmail("");
-    setPassword("");
-    setName("");
-    setRegisterEmail("");
-    setRegisterPassword("");
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-      variant: "default",
-    });
+
+  const handleLogout = async () => {
+    const success = await logout();
+    
+    if (success) {
+      setEmail("");
+      setPassword("");
+      setName("");
+      setRegisterEmail("");
+      setRegisterPassword("");
+      
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "Logout Failed",
+        description: error || "Could not log out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  if (!isLoggedIn) {
+  if (!user) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -134,82 +161,103 @@ const AccountPage = () => {
                 </TabsList>
                 
                 <TabsContent value="login">
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <label htmlFor="email" className="text-sm font-medium">Email</label>
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter your email"
-                      />
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-theatre-maroon"></div>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <label htmlFor="password" className="text-sm font-medium">Password</label>
-                      <Input 
-                        id="password" 
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password"
-                      />
-                    </div>
-                    
-                    <Button type="submit" className="w-full bg-theatre-maroon hover:bg-theatre-gold hover:text-theatre-navy">
-                      Log In
-                    </Button>
-                    
-                    <p className="text-sm text-center text-gray-500 mt-4">
-                      <a href="#" className="text-theatre-navy hover:underline">Forgot password?</a>
-                    </p>
-                  </form>
+                  ) : (
+                    <form onSubmit={handleLogin} className="space-y-4">
+                      <div className="space-y-2">
+                        <label htmlFor="email" className="text-sm font-medium">Email</label>
+                        <Input 
+                          id="email" 
+                          type="email" 
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="Enter your email"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label htmlFor="password" className="text-sm font-medium">Password</label>
+                        <Input 
+                          id="password" 
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Enter your password"
+                        />
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-theatre-maroon hover:bg-theatre-gold hover:text-theatre-navy"
+                        disabled={loading}
+                      >
+                        {loading ? 'Logging In...' : 'Log In'}
+                      </Button>
+                      
+                      <p className="text-sm text-center text-gray-500 mt-4">
+                        <a href="#" className="text-theatre-navy hover:underline">Forgot password?</a>
+                      </p>
+                    </form>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="register">
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="space-y-2">
-                      <label htmlFor="name" className="text-sm font-medium">Full Name</label>
-                      <Input 
-                        id="name" 
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter your full name"
-                      />
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-theatre-maroon"></div>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <label htmlFor="register-email" className="text-sm font-medium">Email</label>
-                      <Input 
-                        id="register-email" 
-                        type="email"
-                        value={registerEmail}
-                        onChange={(e) => setRegisterEmail(e.target.value)}
-                        placeholder="Enter your email"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label htmlFor="register-password" className="text-sm font-medium">Password</label>
-                      <Input 
-                        id="register-password" 
-                        type="password"
-                        value={registerPassword}
-                        onChange={(e) => setRegisterPassword(e.target.value)}
-                        placeholder="Create a password"
-                      />
-                    </div>
-                    
-                    <Button type="submit" className="w-full bg-theatre-maroon hover:bg-theatre-gold hover:text-theatre-navy">
-                      Create Account
-                    </Button>
-                    
-                    <p className="text-xs text-center text-gray-500 mt-4">
-                      By creating an account, you agree to our Terms of Service and Privacy Policy.
-                    </p>
-                  </form>
+                  ) : (
+                    <form onSubmit={handleRegister} className="space-y-4">
+                      <div className="space-y-2">
+                        <label htmlFor="name" className="text-sm font-medium">Full Name</label>
+                        <Input 
+                          id="name" 
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Enter your full name"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label htmlFor="register-email" className="text-sm font-medium">Email</label>
+                        <Input 
+                          id="register-email" 
+                          type="email"
+                          value={registerEmail}
+                          onChange={(e) => setRegisterEmail(e.target.value)}
+                          placeholder="Enter your email"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label htmlFor="register-password" className="text-sm font-medium">Password</label>
+                        <Input 
+                          id="register-password" 
+                          type="password"
+                          value={registerPassword}
+                          onChange={(e) => setRegisterPassword(e.target.value)}
+                          placeholder="Create a password"
+                          minLength={6}
+                        />
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-theatre-maroon hover:bg-theatre-gold hover:text-theatre-navy"
+                        disabled={loading}
+                      >
+                        {loading ? 'Creating Account...' : 'Create Account'}
+                      </Button>
+                      
+                      <p className="text-xs text-center text-gray-500 mt-4">
+                        By creating an account, you agree to our Terms of Service and Privacy Policy.
+                      </p>
+                    </form>
+                  )}
                 </TabsContent>
               </Tabs>
               
@@ -252,7 +300,7 @@ const AccountPage = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">My Account</h1>
-              <p className="text-gray-300">Welcome back, {userData.name}</p>
+              <p className="text-gray-300">Welcome back, {user.name}</p>
             </div>
             <Button variant="outline" className="border-white text-white hover:bg-white hover:text-theatre-navy mt-4 md:mt-0" onClick={handleLogout}>
               Log Out
@@ -284,30 +332,30 @@ const AccountPage = () => {
                           <User className="h-8 w-8" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg">{userData.name}</h3>
-                          <p className="text-gray-500 text-sm">{userData.email}</p>
+                          <h3 className="font-bold text-lg">{user.name}</h3>
+                          <p className="text-gray-500 text-sm">{user.email}</p>
                         </div>
                       </div>
                       
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-500">Member Since:</span>
-                          <span>{userData.joinDate}</span>
+                          <span>{user.created_at ? new Date(user.created_at).toLocaleDateString() : 'New Member'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Shows Attended:</span>
-                          <span>{userData.showsAttended}</span>
+                          <span>{user.shows_attended || 0}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-gray-500">Loyalty Tier:</span>
                           <Badge className={
-                            userData.loyaltyTier === "Gold" 
+                            user.loyalty_tier === "Gold" 
                               ? "bg-theatre-gold text-theatre-navy" 
-                              : userData.loyaltyTier === "Silver" 
+                              : user.loyalty_tier === "Silver" 
                               ? "bg-[#c0c0c0] text-theatre-navy" 
                               : "bg-[#cd7f32] text-white"
                           }>
-                            {userData.loyaltyTier}
+                            {user.loyalty_tier || 'Bronze'}
                           </Badge>
                         </div>
                       </div>
@@ -324,89 +372,108 @@ const AccountPage = () => {
                       <div className="mb-6">
                         <div className="flex items-center mb-2">
                           <Award className={`h-6 w-6 mr-2 ${
-                            userData.loyaltyTier === "Gold" 
+                            user.loyalty_tier === "Gold" 
                               ? "text-theatre-gold" 
-                              : userData.loyaltyTier === "Silver" 
+                              : user.loyalty_tier === "Silver" 
                               ? "text-[#c0c0c0]" 
                               : "text-[#cd7f32]"
                           }`} />
-                          <h3 className="font-bold">{userData.loyaltyTier} Tier Member</h3>
+                          <h3 className="font-bold">{user.loyalty_tier || 'Bronze'} Tier Member</h3>
                         </div>
                         <p className="text-gray-600 mb-4">
-                          Enjoy {userData.loyaltyTier === "Gold" ? "30%" : userData.loyaltyTier === "Silver" ? "20%" : "10%"} off 
+                          Enjoy {user.loyalty_tier === "Gold" ? "30%" : user.loyalty_tier === "Silver" ? "20%" : "10%"} off 
                           select performances and exclusive benefits.
                         </p>
                         
-                        <div className="bg-gray-200 h-2 rounded-full overflow-hidden mb-2">
-                          <div 
-                            className={`h-full ${
-                              userData.loyaltyTier === "Gold" 
-                                ? "bg-theatre-gold" 
-                                : userData.loyaltyTier === "Silver" 
-                                ? "bg-[#c0c0c0]" 
-                                : "bg-[#cd7f32]"
-                            }`}
-                            style={{ width: `${(userData.pointsEarned / (userData.pointsEarned + userData.pointsToNextTier)) * 100}%` }}
-                          ></div>
-                        </div>
-                        
-                        <div className="flex justify-between text-sm text-gray-500 mb-4">
-                          <span>Points: {userData.pointsEarned}</span>
-                          {userData.loyaltyTier !== "Gold" && (
-                            <span>{userData.pointsToNextTier} points to {userData.loyaltyTier === "Silver" ? "Gold" : "Silver"} tier</span>
-                          )}
-                        </div>
+                        {(() => {
+                          const currentPoints = user.points || 0;
+                          const pointsToNextTier = user.loyalty_tier === 'Bronze' ? 2000 - currentPoints : 
+                                                  user.loyalty_tier === 'Silver' ? 4000 - currentPoints : 0;
+                          const progressPercent = pointsToNextTier > 0 
+                            ? (currentPoints / (currentPoints + pointsToNextTier)) * 100
+                            : 100;
+                            
+                          return (
+                            <>
+                              <div className="bg-gray-200 h-2 rounded-full overflow-hidden mb-2">
+                                <div 
+                                  className={`h-full ${
+                                    user.loyalty_tier === "Gold" 
+                                      ? "bg-theatre-gold" 
+                                      : user.loyalty_tier === "Silver" 
+                                      ? "bg-[#c0c0c0]" 
+                                      : "bg-[#cd7f32]"
+                                  }`}
+                                  style={{ width: `${progressPercent}%` }}
+                                ></div>
+                              </div>
+                              
+                              <div className="flex justify-between text-sm text-gray-500 mb-4">
+                                <span>Points: {currentPoints}</span>
+                                {user.loyalty_tier !== "Gold" && (
+                                  <span>{pointsToNextTier} points to {user.loyalty_tier === "Silver" ? "Gold" : "Silver"} tier</span>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                       
                       <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <h4 className="font-bold mb-2">Your Benefits</h4>
                         <ul className="space-y-1 text-sm">
-                          {userData.loyaltyTier === "Gold" ? (
-                            <>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-theatre-gold mr-2" />
-                                <span>30% off all performances</span>
-                              </li>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-theatre-gold mr-2" />
-                                <span>VIP package included</span>
-                              </li>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-theatre-gold mr-2" />
-                                <span>Advanced priority booking</span>
-                              </li>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-theatre-gold mr-2" />
-                                <span>Complimentary ticket upgrades</span>
-                              </li>
-                            </>
-                          ) : userData.loyaltyTier === "Silver" ? (
-                            <>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
-                                <span>20% off select performances</span>
-                              </li>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
-                                <span>Free program & beverage</span>
-                              </li>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
-                                <span>Priority booking window</span>
-                              </li>
-                            </>
-                          ) : (
-                            <>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-[#cd7f32] mr-2" />
-                                <span>10% off select performances</span>
-                              </li>
-                              <li className="flex items-center">
-                                <Star className="h-4 w-4 text-[#cd7f32] mr-2" />
-                                <span>Free program booklet</span>
-                              </li>
-                            </>
-                          )}
+                          {(() => {
+                            const benefits = [];
+                            
+                            if (user.loyalty_tier === "Gold") {
+                              benefits.push(
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-theatre-gold mr-2" />
+                                  <span>30% off all performances</span>
+                                </li>,
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-theatre-gold mr-2" />
+                                  <span>VIP package included</span>
+                                </li>,
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-theatre-gold mr-2" />
+                                  <span>Advanced priority booking</span>
+                                </li>,
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-theatre-gold mr-2" />
+                                  <span>Complimentary ticket upgrades</span>
+                                </li>
+                              );
+                            } else if (user.loyalty_tier === "Silver") {
+                              benefits.push(
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
+                                  <span>20% off select performances</span>
+                                </li>,
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
+                                  <span>Free program & beverage</span>
+                                </li>,
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
+                                  <span>Priority booking window</span>
+                                </li>
+                              );
+                            } else {
+                              benefits.push(
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-[#cd7f32] mr-2" />
+                                  <span>10% off select performances</span>
+                                </li>,
+                                <li className="flex items-center">
+                                  <Star className="h-4 w-4 text-[#cd7f32] mr-2" />
+                                  <span>Free program booklet</span>
+                                </li>
+                              );
+                            }
+                            
+                            return benefits;
+                          })()}
                         </ul>
                         
                         <div className="mt-4">
@@ -422,7 +489,7 @@ const AccountPage = () => {
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-center">
                         <h2 className="text-xl font-bold">Upcoming Shows</h2>
-                        {userData.upcomingShows.length > 0 && (
+                        {mockBookingData.upcomingShows.length > 0 && (
                           <Link to="/upcoming">
                             <Button variant="link" className="text-theatre-maroon p-0">View All</Button>
                           </Link>
@@ -430,8 +497,8 @@ const AccountPage = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {userData.upcomingShows.length > 0 ? (
-                        userData.upcomingShows.map((show, index) => (
+                      {mockBookingData.upcomingShows.length > 0 ? (
+                        mockBookingData.upcomingShows.map((show, index) => (
                           <div key={index} className="flex items-start space-x-4 mb-4 last:mb-0">
                             <div className="relative flex-shrink-0 w-24 h-24 overflow-hidden rounded">
                               <img 
@@ -479,8 +546,8 @@ const AccountPage = () => {
                   <h2 className="text-2xl font-bold">Upcoming Shows</h2>
                 </CardHeader>
                 <CardContent>
-                  {userData.upcomingShows.length > 0 ? (
-                    userData.upcomingShows.map((show, index) => (
+                  {mockBookingData.upcomingShows.length > 0 ? (
+                    mockBookingData.upcomingShows.map((show, index) => (
                       <div key={index} className="mb-6 pb-6 last:mb-0 last:pb-0 border-b last:border-0">
                         <div className="flex flex-col md:flex-row md:items-start gap-6">
                           <div className="relative flex-shrink-0 w-full md:w-48 h-48 overflow-hidden rounded">
@@ -556,8 +623,8 @@ const AccountPage = () => {
                   <h2 className="text-2xl font-bold">Past Shows</h2>
                 </CardHeader>
                 <CardContent>
-                  {userData.pastShows.length > 0 ? (
-                    userData.pastShows.map((show, index) => (
+                  {mockBookingData.pastShows.length > 0 ? (
+                    mockBookingData.pastShows.map((show, index) => (
                       <div key={index} className="mb-6 pb-6 last:mb-0 last:pb-0 border-b last:border-0">
                         <div className="flex flex-col md:flex-row md:items-start gap-6">
                           <div className="relative flex-shrink-0 w-full md:w-48 h-48 overflow-hidden rounded">
@@ -637,7 +704,7 @@ const AccountPage = () => {
                         <Input 
                           id="name" 
                           type="text"
-                          value={userData.name}
+                          value={user.name}
                         />
                       </div>
                       <div className="space-y-2">
@@ -645,7 +712,7 @@ const AccountPage = () => {
                         <Input 
                           id="email" 
                           type="email"
-                          value={userData.email}
+                          value={user.email}
                         />
                       </div>
                     </div>
