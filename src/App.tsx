@@ -23,21 +23,34 @@ const App = () => {
   // Check for Supabase session on app load
   useEffect(() => {
     const checkSession = async () => {
-      await supabase.auth.getSession();
-      setSupabaseInitialized(true);
+      if (!supabase) {
+        console.error("Supabase client is not initialized. Please check your environment variables.");
+        setSupabaseInitialized(true); // Set to true anyway to avoid loading state
+        return;
+      }
+      
+      try {
+        await supabase.auth.getSession();
+      } catch (error) {
+        console.error("Error getting Supabase session:", error);
+      } finally {
+        setSupabaseInitialized(true);
+      }
     };
     
     checkSession();
     
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, _session) => {
-        // We'll let the useSupabaseAuth hook handle the detailed logic
-        console.log("Auth state changed");
-      }
-    );
-    
-    return () => subscription?.unsubscribe();
+    // Set up auth state change listener only if supabase client exists
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (_event, _session) => {
+          // We'll let the useSupabaseAuth hook handle the detailed logic
+          console.log("Auth state changed");
+        }
+      );
+      
+      return () => subscription?.unsubscribe();
+    }
   }, []);
 
   return (

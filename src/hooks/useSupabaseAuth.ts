@@ -3,10 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 import { useState } from 'react';
 
 // Initialize the Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Check if Supabase environment variables are set
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    "Supabase environment variables are missing. Make sure to set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment."
+  );
+}
+
+// Create client only if we have the required values
+export const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 export interface UserData {
   id?: string;
@@ -22,6 +32,19 @@ export const useSupabaseAuth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
+
+  // Check if Supabase client is initialized
+  if (!supabase) {
+    return {
+      user: null,
+      loading: false,
+      error: "Supabase is not configured. Please set the required environment variables.",
+      register: async () => false,
+      login: async () => false,
+      logout: async () => false,
+      checkSession: async () => {},
+    };
+  }
 
   // Register a new user
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
