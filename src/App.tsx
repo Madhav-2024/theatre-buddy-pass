@@ -13,6 +13,7 @@ import ContactPage from "./pages/ContactPage";
 import NotFound from "./pages/NotFound";
 import { useEffect, useState } from "react";
 import { supabase } from "./hooks/useSupabaseAuth";
+import { toast } from "./components/ui/use-toast";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,11 @@ const App = () => {
     const checkSession = async () => {
       if (!supabase) {
         console.error("Supabase client is not initialized. Please check your environment variables.");
+        toast({
+          title: "Configuration Error",
+          description: "Supabase is not properly configured. Please update your environment variables with valid Supabase credentials.",
+          variant: "destructive",
+        });
         setSupabaseInitialized(true); // Set to true anyway to avoid loading state
         return;
       }

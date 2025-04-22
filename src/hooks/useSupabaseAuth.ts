@@ -6,17 +6,37 @@ import { useState } from 'react';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Check if Supabase environment variables are set
-if (!supabaseUrl || !supabaseAnonKey) {
+// Validate URL format
+const isValidUrl = (url: string): boolean => {
+  try {
+    // Test if this is a valid URL by trying to construct a URL object
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return false;
+    }
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Create client only if we have valid values
+export const supabase = (isValidUrl(supabaseUrl) && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
+// Check and log appropriate warning messages
+if (!supabaseUrl || !isValidUrl(supabaseUrl)) {
   console.error(
-    "Supabase environment variables are missing. Make sure to set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment."
+    "Supabase URL is missing or invalid. Please set a valid VITE_SUPABASE_URL in your environment (.env file). Format should be: https://your-project-id.supabase.co"
   );
 }
 
-// Create client only if we have the required values
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+if (!supabaseAnonKey) {
+  console.error(
+    "Supabase Anon Key is missing. Please set VITE_SUPABASE_ANON_KEY in your environment (.env file)."
+  );
+}
 
 export interface UserData {
   id?: string;
@@ -38,7 +58,7 @@ export const useSupabaseAuth = () => {
     return {
       user: null,
       loading: false,
-      error: "Supabase is not configured. Please set the required environment variables.",
+      error: "Supabase is not configured properly. Please check your environment variables and ensure they contain valid values.",
       register: async () => false,
       login: async () => false,
       logout: async () => false,
