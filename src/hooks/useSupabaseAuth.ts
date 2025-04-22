@@ -8,9 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface UserData {
   id?: string;
-  name: string;
+  full_name: string;  // Changed from name to full_name to match database
   email: string;
   created_at?: string;
+  updated_at?: string;
+  phone?: string;
   loyalty_tier?: string;
   points?: number;
   shows_attended?: number;
@@ -22,7 +24,7 @@ export const useSupabaseAuth = () => {
   const [user, setUser] = useState<UserData | null>(null);
 
   // Register a new user
-  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+  const register = async (fullName: string, email: string, password: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
     
@@ -46,22 +48,35 @@ export const useSupabaseAuth = () => {
         .from('users')
         .insert({
           id: authData.user.id,
-          name,
+          full_name: fullName,  // Changed from name to full_name
           email,
-          loyalty_tier: 'Bronze', // Default tier for new users
-          points: 0,
-          shows_attended: 0
         });
 
       if (profileError) {
         throw profileError;
       }
 
+      // 3. Create an entry in loyalty_points for the new user
+      const { error: loyaltyError } = await supabase
+        .from('loyalty_points')
+        .insert({
+          user_id: authData.user.id,
+          points_balance: 0,
+          shows_attended: 0,
+          tier: 'Bronze',
+        });
+
+      if (loyaltyError) {
+        console.error('Could not create loyalty record:', loyaltyError);
+        // We won't throw here, as we've already created the user
+      }
+
       // 3. Set the user state
       setUser({
         id: authData.user.id,
-        name,
+        full_name: fullName,  // Changed from name to full_name
         email,
+        created_at: new Date().toISOString(),
         loyalty_tier: 'Bronze',
         points: 0,
         shows_attended: 0
@@ -109,7 +124,14 @@ export const useSupabaseAuth = () => {
       }
 
       // 3. Set the user state
-      setUser(profileData);
+      setUser({
+        id: profileData.id,
+        full_name: profileData.full_name,  // Changed from name to full_name
+        email: profileData.email,
+        created_at: profileData.created_at,
+        updated_at: profileData.updated_at,
+        phone: profileData.phone
+      });
       
       return true;
     } catch (err) {
@@ -163,7 +185,14 @@ export const useSupabaseAuth = () => {
           throw error;
         }
         
-        setUser(data);
+        setUser({
+          id: data.id,
+          full_name: data.full_name,  // Changed from name to full_name
+          email: data.email,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          phone: data.phone
+        });
       }
     } catch (err) {
       console.error('Session check error:', err);
