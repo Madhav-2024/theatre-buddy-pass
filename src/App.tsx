@@ -12,7 +12,7 @@ import AccountPage from "./pages/AccountPage";
 import ContactPage from "./pages/ContactPage";
 import NotFound from "./pages/NotFound";
 import { useEffect, useState } from "react";
-import { supabase } from "./hooks/useSupabaseAuth";
+import { supabase } from "./integrations/supabase/client";
 import { toast } from "./components/ui/use-toast";
 
 const queryClient = new QueryClient();
@@ -24,21 +24,15 @@ const App = () => {
   // Check for Supabase session on app load
   useEffect(() => {
     const checkSession = async () => {
-      if (!supabase) {
-        console.error("Supabase client is not initialized. Please check your environment variables.");
+      try {
+        await supabase.auth.getSession();
+      } catch (error) {
+        console.error("Error getting Supabase session:", error);
         toast({
           title: "Configuration Error",
           description: "Supabase is not properly configured. Please update your environment variables with valid Supabase credentials.",
           variant: "destructive",
         });
-        setSupabaseInitialized(true); // Set to true anyway to avoid loading state
-        return;
-      }
-      
-      try {
-        await supabase.auth.getSession();
-      } catch (error) {
-        console.error("Error getting Supabase session:", error);
       } finally {
         setSupabaseInitialized(true);
       }
@@ -46,17 +40,15 @@ const App = () => {
     
     checkSession();
     
-    // Set up auth state change listener only if supabase client exists
-    if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (_event, _session) => {
-          // We'll let the useSupabaseAuth hook handle the detailed logic
-          console.log("Auth state changed");
-        }
-      );
-      
-      return () => subscription?.unsubscribe();
-    }
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, _session) => {
+        // We'll let the useSupabaseAuth hook handle the detailed logic
+        console.log("Auth state changed");
+      }
+    );
+    
+    return () => subscription?.unsubscribe();
   }, []);
 
   return (

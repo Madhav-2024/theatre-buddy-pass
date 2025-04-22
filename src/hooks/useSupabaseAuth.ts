@@ -1,42 +1,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { useState } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 
-// Initialize the Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-// Validate URL format
-const isValidUrl = (url: string): boolean => {
-  try {
-    // Test if this is a valid URL by trying to construct a URL object
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return false;
-    }
-    new URL(url);
-    return true;
-  } catch (e) {
-    return false;
-  }
-};
-
-// Create client only if we have valid values
-export const supabase = (isValidUrl(supabaseUrl) && supabaseAnonKey)
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
-
-// Check and log appropriate warning messages
-if (!supabaseUrl || !isValidUrl(supabaseUrl)) {
-  console.error(
-    "Supabase URL is missing or invalid. Please set a valid VITE_SUPABASE_URL in your environment (.env file). Format should be: https://your-project-id.supabase.co"
-  );
-}
-
-if (!supabaseAnonKey) {
-  console.error(
-    "Supabase Anon Key is missing. Please set VITE_SUPABASE_ANON_KEY in your environment (.env file)."
-  );
-}
+// The supabase client is now imported from the official client file, 
+// which already has the correct URL and key from the environment variables
 
 export interface UserData {
   id?: string;
@@ -52,19 +20,6 @@ export const useSupabaseAuth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
-
-  // Check if Supabase client is initialized
-  if (!supabase) {
-    return {
-      user: null,
-      loading: false,
-      error: "Supabase is not configured properly. Please check your environment variables and ensure they contain valid values.",
-      register: async () => false,
-      login: async () => false,
-      logout: async () => false,
-      checkSession: async () => {},
-    };
-  }
 
   // Register a new user
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
