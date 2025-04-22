@@ -300,7 +300,7 @@ const AccountPage = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">My Account</h1>
-              <p className="text-gray-300">Welcome back, {user.name}</p>
+              <p className="text-gray-300">Welcome back, {user.full_name}</p>
             </div>
             <Button variant="outline" className="border-white text-white hover:bg-white hover:text-theatre-navy mt-4 md:mt-0" onClick={handleLogout}>
               Log Out
@@ -332,7 +332,7 @@ const AccountPage = () => {
                           <User className="h-8 w-8" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg">{user.name}</h3>
+                          <h3 className="font-bold text-lg">{user.full_name}</h3>
                           <p className="text-gray-500 text-sm">{user.email}</p>
                         </div>
                       </div>
@@ -704,7 +704,7 @@ const AccountPage = () => {
                         <Input 
                           id="name" 
                           type="text"
-                          value={user.name}
+                          value={user.full_name}
                         />
                       </div>
                       <div className="space-y-2">
