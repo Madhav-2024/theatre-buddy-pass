@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Ticket, Award, User, Star, Clock, MapPin } from "lucide-react";
+import { Calendar, Ticket, MapPin, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
-import { useSupabaseAuth, UserData } from "@/hooks/useSupabaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import ProfileOverview from "@/components/account/ProfileOverview";
+import LoyaltyProgramStatus from "@/components/account/LoyaltyProgramStatus";
 
 const mockBookingData = {
   upcomingShows: [
@@ -322,168 +323,11 @@ const AccountPage = () => {
             <TabsContent value="overview">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <h2 className="text-xl font-bold">Profile Information</h2>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center mb-6">
-                        <div className="bg-theatre-navy text-white rounded-full w-16 h-16 flex items-center justify-center mr-4">
-                          <User className="h-8 w-8" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-lg">{user.full_name}</h3>
-                          <p className="text-gray-500 text-sm">{user.email}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Member Since:</span>
-                          <span>{user.created_at ? new Date(user.created_at).toLocaleDateString() : 'New Member'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Shows Attended:</span>
-                          <span>{user.shows_attended || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Loyalty Tier:</span>
-                          <Badge className={
-                            user.loyalty_tier === "Gold" 
-                              ? "bg-theatre-gold text-theatre-navy" 
-                              : user.loyalty_tier === "Silver" 
-                              ? "bg-[#c0c0c0] text-theatre-navy" 
-                              : "bg-[#cd7f32] text-white"
-                          }>
-                            {user.loyalty_tier || 'Bronze'}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ProfileOverview user={user} />
                 </div>
                 
                 <div className="lg:col-span-2">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <h2 className="text-xl font-bold">Loyalty Program Status</h2>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="mb-6">
-                        <div className="flex items-center mb-2">
-                          <Award className={`h-6 w-6 mr-2 ${
-                            user.loyalty_tier === "Gold" 
-                              ? "text-theatre-gold" 
-                              : user.loyalty_tier === "Silver" 
-                              ? "text-[#c0c0c0]" 
-                              : "text-[#cd7f32]"
-                          }`} />
-                          <h3 className="font-bold">{user.loyalty_tier || 'Bronze'} Tier Member</h3>
-                        </div>
-                        <p className="text-gray-600 mb-4">
-                          Enjoy {user.loyalty_tier === "Gold" ? "30%" : user.loyalty_tier === "Silver" ? "20%" : "10%"} off 
-                          select performances and exclusive benefits.
-                        </p>
-                        
-                        {(() => {
-                          const currentPoints = user.points || 0;
-                          const pointsToNextTier = user.loyalty_tier === 'Bronze' ? 2000 - currentPoints : 
-                                                  user.loyalty_tier === 'Silver' ? 4000 - currentPoints : 0;
-                          const progressPercent = pointsToNextTier > 0 
-                            ? (currentPoints / (currentPoints + pointsToNextTier)) * 100
-                            : 100;
-                            
-                          return (
-                            <>
-                              <div className="bg-gray-200 h-2 rounded-full overflow-hidden mb-2">
-                                <div 
-                                  className={`h-full ${
-                                    user.loyalty_tier === "Gold" 
-                                      ? "bg-theatre-gold" 
-                                      : user.loyalty_tier === "Silver" 
-                                      ? "bg-[#c0c0c0]" 
-                                      : "bg-[#cd7f32]"
-                                  }`}
-                                  style={{ width: `${progressPercent}%` }}
-                                ></div>
-                              </div>
-                              
-                              <div className="flex justify-between text-sm text-gray-500 mb-4">
-                                <span>Points: {currentPoints}</span>
-                                {user.loyalty_tier !== "Gold" && (
-                                  <span>{pointsToNextTier} points to {user.loyalty_tier === "Silver" ? "Gold" : "Silver"} tier</span>
-                                )}
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                      
-                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <h4 className="font-bold mb-2">Your Benefits</h4>
-                        <ul className="space-y-1 text-sm">
-                          {(() => {
-                            const benefits = [];
-                            
-                            if (user.loyalty_tier === "Gold") {
-                              benefits.push(
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-theatre-gold mr-2" />
-                                  <span>30% off all performances</span>
-                                </li>,
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-theatre-gold mr-2" />
-                                  <span>VIP package included</span>
-                                </li>,
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-theatre-gold mr-2" />
-                                  <span>Advanced priority booking</span>
-                                </li>,
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-theatre-gold mr-2" />
-                                  <span>Complimentary ticket upgrades</span>
-                                </li>
-                              );
-                            } else if (user.loyalty_tier === "Silver") {
-                              benefits.push(
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
-                                  <span>20% off select performances</span>
-                                </li>,
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
-                                  <span>Free program & beverage</span>
-                                </li>,
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-[#c0c0c0] mr-2" />
-                                  <span>Priority booking window</span>
-                                </li>
-                              );
-                            } else {
-                              benefits.push(
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-[#cd7f32] mr-2" />
-                                  <span>10% off select performances</span>
-                                </li>,
-                                <li className="flex items-center">
-                                  <Star className="h-4 w-4 text-[#cd7f32] mr-2" />
-                                  <span>Free program booklet</span>
-                                </li>
-                              );
-                            }
-                            
-                            return benefits;
-                          })()}
-                        </ul>
-                        
-                        <div className="mt-4">
-                          <Link to="/special-offers" className="text-theatre-maroon hover:underline text-sm">
-                            View all loyalty program benefits
-                          </Link>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <LoyaltyProgramStatus user={user} />
                   
                   <Card className="mt-6">
                     <CardHeader className="pb-2">
